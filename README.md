@@ -27,7 +27,7 @@ It ships **two transports**:
 ```
                  push to master
 GitHub repo ──────────┬────────────────► Render  (Docker web service)
-                      │                   https://vecna.onrender.com
+                      │                   https://vecna-svpo.onrender.com
                       │                     /mcp        ← AI clients (opencode, Claude)
                       │                     /api/...    ← REST for the frontend
                       │                     /api/health ← health check
@@ -76,14 +76,14 @@ Or manually:
 1. Push the repo to GitHub (`git push origin master`).
 2. Render dashboard → **New → Blueprint** → select the `VECNA` repo.
 3. Render reads `render.yaml`, creates the **`vecna`** web service, and deploys.
-4. When the build finishes you get a URL: `https://vecna.onrender.com`
+4. When the build finishes you get a URL: `https://vecna-svpo.onrender.com`
    (if the name is taken, Render appends a suffix, e.g. `https://vecna-ab12.onrender.com`).
 
 Verify:
 ```bash
-curl https://vecna.onrender.com/api/health      # → {"status":"ok","server":"vecna"}
+curl https://vecna-svpo.onrender.com/api/health      # → {"status":"ok","server":"vecna"}
 ```
-The MCP endpoint is `https://vecna.onrender.com/mcp`.
+The MCP endpoint is `https://vecna-svpo.onrender.com/mcp/`.
 
 **Every later `git push` to `master` redeploys to the same URL** (`autoDeploy: true`).
 
@@ -118,7 +118,7 @@ Edit `~/.config/opencode/opencode.json`. **Hosted (recommended):**
   "mcp": {
     "vecna": {
       "type": "remote",
-      "url": "https://vecna.onrender.com/mcp",
+      "url": "https://vecna-svpo.onrender.com/mcp/",
       "enabled": true
     }
   }
@@ -151,7 +151,7 @@ bridge:
   "mcpServers": {
     "vecna": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://vecna.onrender.com/mcp"]
+      "args": ["-y", "mcp-remote", "https://vecna-svpo.onrender.com/mcp/"]
     }
   }
 }
@@ -178,7 +178,7 @@ Restart the client after editing config.
 
 | # | Requirement | Mechanism |
 |---|-------------|-----------|
-| 1 | MCP reachable from opencode | Render `https://vecna.onrender.com/mcp`, `type: remote` in opencode config |
+| 1 | MCP reachable from opencode | Render `https://vecna-svpo.onrender.com/mcp`, `type: remote` in opencode config |
 | 2 | Reachable after restart/change, like before | `render.yaml` + `autoDeploy` → stable URL survives redeploys; Pages workflow same |
 | 3 | Frontend same restrictions | GitHub Pages (stable URL, auto-deploy on push) fetching the Render `/api` |
 | 4 | README docs + client config | This file (deploy steps + opencode/Claude config above) |
