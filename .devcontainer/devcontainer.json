@@ -2,9 +2,9 @@
   "name": "VECNA",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {}
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/va-h/devcontainers-features/uv:1": {}
   },
-  "onCreateCommand": "pip install --user uv",
   "postCreateCommand": "uv sync",
   "forwardPorts": [8000],
   "portsAttributes": {
@@ -20,3 +20,4 @@
     }
   }
 }
+
