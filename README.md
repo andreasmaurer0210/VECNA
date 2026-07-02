@@ -25,6 +25,24 @@ uv sync
 uv run vecna
 ```
 
+## Running in GitHub Codespaces (public HTTP URL)
+
+VECNA can also run over Streamable HTTP instead of stdio, which lets you expose
+it via a public URL using GitHub Codespaces port forwarding:
+
+1. On GitHub, click **Code → Codespaces → Create codespace on main**.
+2. Once the Codespace has finished setting up (`uv sync` runs automatically),
+   start the server in HTTP mode in the terminal:
+   ```bash
+   VECNA_TRANSPORT=http VECNA_PORT=8000 uv run vecna
+   ```
+3. Open the **Ports** tab, find port `8000` (already set to *Public* visibility
+   by `.devcontainer/devcontainer.json`), and copy the forwarded URL.
+4. The MCP endpoint is reachable at `https://<forwarded-url>/mcp/`.
+
+The Codespace (and the public URL) only stays available while the Codespace is
+running — stop or delete it when you're done to avoid using up your quota.
+
 ## Project structure
 
 ```
