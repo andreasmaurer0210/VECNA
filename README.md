@@ -65,7 +65,13 @@ VECNA_TRANSPORT=http VECNA_PORT=8000 uv run vecna
 ## Deploy the server to Render
 
 The repo already contains [`render.yaml`](render.yaml) (Blueprint) and a
-[`Dockerfile`](Dockerfile). One-time setup:
+[`Dockerfile`](Dockerfile).
+
+**One-click** (reads `render.yaml`, just sign in to Render):
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/andreasmaurer0210/VECNA)
+
+Or manually:
 
 1. Push the repo to GitHub (`git push origin master`).
 2. Render dashboard → **New → Blueprint** → select the `VECNA` repo.
