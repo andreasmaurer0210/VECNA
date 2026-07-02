@@ -10,13 +10,23 @@ Modules:
 """
 
 import asyncio
+import os
 
-from vecna.server import main as _main
+from vecna.server import run_http, run_stdio
 
 
 def main() -> None:
-    """Synchronous entry point for the `vecna` CLI command."""
-    asyncio.run(_main())
+    """
+    Synchronous entry point for the `vecna` CLI command.
+
+    Transport is selected via the VECNA_TRANSPORT env var:
+      "stdio" (default) - local stdio transport
+      "http"             - Streamable HTTP transport (see VECNA_HOST/VECNA_PORT)
+    """
+    if os.environ.get("VECNA_TRANSPORT", "stdio").lower() == "http":
+        run_http()
+    else:
+        asyncio.run(run_stdio())
 
 
 __all__ = ["main"]
