@@ -1,9 +1,6 @@
 {
   "name": "VECNA",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
-  "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {}
-  },
   "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh && $HOME/.local/bin/uv sync",
   "remoteEnv": {
     "PATH": "${containerEnv:HOME}/.local/bin:${containerEnv:PATH}"
