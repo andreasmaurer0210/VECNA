@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VECNA — D&D 5e Compendium</title>
+  <!-- Server URL — change this if VECNA runs on a different host/port -->
+  <meta name="vecna-server" content="http://localhost:8000" />
   <style>
     /* ── Reset & Base ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,7 +43,28 @@
       display: flex;
       align-items: center;
       gap: 16px;
+      justify-content: space-between;
     }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.ok      { background: #27ae60; }
+    .status-dot.error   { background: var(--accent); }
+    .status-dot.checking { background: var(--gold); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
     header h1 {
       font-size: 1.6rem;
       color: var(--gold);
@@ -384,9 +407,15 @@
 <body>
 <div class="app">
   <header>
-    <div>
-      <h1>VECNA</h1>
-      <div class="subtitle">D&D 5e · SRD Compendium</div>
+    <div class="header-left">
+      <div>
+        <h1>VECNA</h1>
+        <div class="subtitle">D&D 5e · SRD Compendium</div>
+      </div>
+    </div>
+    <div class="server-status">
+      <div class="status-dot checking" id="status-dot"></div>
+      <span id="status-label">Connecting…</span>
     </div>
   </header>
 
@@ -473,13 +502,38 @@
 </div>
 
 <script>
-const API = 'https://www.dnd5eapi.co/api/2014';
+const SERVER = document.querySelector('meta[name="vecna-server"]').content;
+const API    = SERVER + '/api';
+
+// ── Server health check ───────────────────────────────────────────────────
+
+async function checkServer() {
+  const dot   = document.getElementById('status-dot');
+  const label = document.getElementById('status-label');
+  dot.className = 'status-dot checking';
+  label.textContent = 'Connecting…';
+  try {
+    const r = await fetch(API + '/health');
+    if (r.ok) {
+      dot.className = 'status-dot ok';
+      label.textContent = SERVER.replace('http://', '') + ' · online';
+    } else {
+      throw new Error('HTTP ' + r.status);
+    }
+  } catch {
+    dot.className = 'status-dot error';
+    label.textContent = 'Server offline — run: VECNA_TRANSPORT=http uv run vecna';
+  }
+}
+
+// ── Cache + fetch ─────────────────────────────────────────────────────────
+
 const cache = {};
 
 async function apiFetch(path) {
   if (cache[path]) return cache[path];
   const r = await fetch(API + path);
-  if (!r.ok) throw new Error(`API error ${r.status}`);
+  if (!r.ok) throw new Error(`Server error ${r.status}`);
   const data = await r.json();
   cache[path] = data;
   return data;
@@ -837,6 +891,7 @@ document.getElementById('dice-input').addEventListener('keydown', e => {
 
 // ── Init ──────────────────────────────────────────────────────────────────
 
+checkServer();
 loadMonsters();
 loadSpells();
 loadClasses();

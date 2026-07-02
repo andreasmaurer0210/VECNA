@@ -121,19 +121,73 @@ def run_http() -> None:
     """
     Start the MCP server over Streamable HTTP.
 
-    Exposes the MCP endpoint at POST/GET /mcp on the given host/port.
+    Exposes:
+      POST/GET /mcp  — MCP Streamable HTTP transport (for AI clients)
+      GET /api/...   — REST JSON endpoints (for the browser frontend)
+      GET /api/health
+
     Configure via env vars:
       VECNA_HOST (default 0.0.0.0)
       VECNA_PORT (default 8000)
     """
     import uvicorn
     from starlette.applications import Starlette
-    from starlette.routing import Mount
+    from starlette.middleware.cors import CORSMiddleware
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+    from starlette.routing import Mount, Route
 
     host = os.environ.get("VECNA_HOST", "0.0.0.0")
     port = int(os.environ.get("VECNA_PORT", "8000"))
 
     session_manager = StreamableHTTPSessionManager(app=server, stateless=True)
+
+    # ── REST helpers ─────────────────────────────────────────────────────
+
+    _LIST_FNS = {
+        "monsters": api.list_monsters,
+        "spells":   api.list_spells,
+        "classes":  api.list_classes,
+    }
+    _GET_FNS = {
+        "monsters": api.get_monster,
+        "spells":   api.get_spell,
+        "classes":  api.get_class,
+    }
+
+    async def rest_health(request: Request) -> JSONResponse:
+        return JSONResponse({"status": "ok", "server": "vecna"})
+
+    async def rest_list(request: Request) -> JSONResponse:
+        endpoint = request.path_params["endpoint"]
+        fn = _LIST_FNS.get(endpoint)
+        if not fn:
+            return JSONResponse({"error": f"Unknown endpoint: {endpoint}"}, status_code=404)
+        q = request.query_params.get("q")
+        try:
+            if q:
+                results = await api.search(endpoint, q)
+            else:
+                results = await fn()
+            return JSONResponse({"results": results})
+        except Exception as exc:
+            logger.exception("REST list error for %s", endpoint)
+            return JSONResponse({"error": str(exc)}, status_code=500)
+
+    async def rest_get(request: Request) -> JSONResponse:
+        endpoint = request.path_params["endpoint"]
+        index    = request.path_params["index"]
+        fn = _GET_FNS.get(endpoint)
+        if not fn:
+            return JSONResponse({"error": f"Unknown endpoint: {endpoint}"}, status_code=404)
+        try:
+            data = await fn(index)
+            return JSONResponse(data)
+        except Exception as exc:
+            logger.exception("REST get error for %s/%s", endpoint, index)
+            return JSONResponse({"error": str(exc)}, status_code=500)
+
+    # ── Lifespan ──────────────────────────────────────────────────────────
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette):
@@ -145,11 +199,25 @@ def run_http() -> None:
                 await api.close()
                 logger.info("VECNA server shut down.")
 
+    # ── Starlette app ─────────────────────────────────────────────────────
+
     app = Starlette(
-        routes=[Mount("/mcp", app=session_manager.handle_request)],
+        routes=[
+            Mount("/mcp", app=session_manager.handle_request),
+            Route("/api/health",              rest_health),
+            Route("/api/{endpoint}",          rest_list),
+            Route("/api/{endpoint}/{index}",  rest_get),
+        ],
         lifespan=lifespan,
     )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["GET"],
+        allow_headers=["*"],
+    )
 
+    logger.info("REST API available at http://%s:%s/api/", host, port)
     uvicorn.run(app, host=host, port=port)
 
 

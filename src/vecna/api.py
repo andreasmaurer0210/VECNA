@@ -28,7 +28,7 @@ def _get_sync_client() -> httpx.Client:
     """Get or create the shared sync HTTP client (called in thread)."""
     global _client
     if _client is None:
-        _client = httpx.Client(base_url=BASE_URL, timeout=30.0)
+        _client = httpx.Client(base_url=BASE_URL, timeout=30.0, verify=False)
     return _client
 
 
