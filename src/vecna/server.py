@@ -137,8 +137,9 @@ def run_http() -> None:
     from starlette.responses import JSONResponse
     from starlette.routing import Mount, Route
 
+    # Render (and most PaaS) inject $PORT; honor it, then VECNA_PORT, then default.
     host = os.environ.get("VECNA_HOST", "0.0.0.0")
-    port = int(os.environ.get("VECNA_PORT", "8000"))
+    port = int(os.environ.get("VECNA_PORT") or os.environ.get("PORT") or "8000")
 
     session_manager = StreamableHTTPSessionManager(app=server, stateless=True)
 

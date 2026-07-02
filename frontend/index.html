@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VECNA — D&D 5e Compendium</title>
-  <!-- VECNA server URL (GitHub Codespaces forwarded port) -->
-  <meta name="vecna-server" content="https://scaling-carnival-wj5gw4q6vrhqpx-8000.app.github.dev" />
+  <!-- Deployed VECNA server (Render). Override at runtime with ?server=https://host -->
+  <meta name="vecna-server" content="https://vecna.onrender.com" />
   <style>
     /* ── Reset & Base ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -502,7 +502,8 @@
 </div>
 
 <script>
-const SERVER = document.querySelector('meta[name="vecna-server"]').content;
+const SERVER = new URLSearchParams(location.search).get('server')
+  || document.querySelector('meta[name="vecna-server"]').content;
 const API    = SERVER + '/api';
 
 // ── Server health check ───────────────────────────────────────────────────
