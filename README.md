@@ -22,6 +22,40 @@ It ships **two transports**:
 - **Streamable HTTP** (`VECNA_TRANSPORT=http`) — exposes `POST/GET /mcp` for AI
   clients over the network, plus `GET /api/...` REST endpoints for the frontend.
 
+## Capabilities
+
+Data source: the [D&D 5e SRD API](https://www.dnd5eapi.co) (`/api/2014`).
+The server advertises **9 tools**, **2 resource families**, and **1 prompt**.
+
+### Tools
+
+| Tool | Args | Returns |
+|------|------|---------|
+| `list_monsters` | — | All 334 SRD monsters (`index` + name) |
+| `search_monsters` | `query` | Monsters whose name matches the keyword |
+| `get_monster` | `index` | Stat block: AC, HP, abilities, CR, senses, special abilities |
+| `list_spells` | — | All 319 SRD spells (`index`, name, level) |
+| `search_spells` | `query` | Spells whose name matches the keyword |
+| `get_spell` | `index` | School, components, duration, damage, higher-level scaling |
+| `list_classes` | — | All 12 classes |
+| `get_class` | `index` | Hit die, saving throws, proficiencies, subclasses |
+| `roll_dice` | `dice_expr` | Rolls `NdN(±mod)`, e.g. `2d6+3`, `1d20+5` |
+
+### Resources
+
+Read-only JSON under the `dnd://` scheme (listing caps at the first 50 of each):
+
+| URI | Content |
+|-----|---------|
+| `dnd://monsters/{index}` | Raw monster JSON |
+| `dnd://spells/{index}` | Raw spell JSON |
+
+### Prompts
+
+| Prompt | Args | Purpose |
+|--------|------|---------|
+| `create_character` | `class_name` (optional) | Guided level-1 character creation |
+
 ## Architecture (hosted)
 
 ```
