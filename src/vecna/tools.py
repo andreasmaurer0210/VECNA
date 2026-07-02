@@ -315,7 +315,7 @@ async def _handle_get_class(args: dict | None) -> list[types.TextContent]:
 
     data = await api.get_class(args["index"])
 
-    saves = ", ".join(s.upper() for s in data.get("saving_throws", []))
+    saves = ", ".join(s["name"] for s in data.get("saving_throws", []))
     profs = [p["name"] for p in data.get("proficiencies", [])]
     subclasses = ", ".join(s["name"] for s in data.get("subclasses", []))
 
@@ -369,5 +369,5 @@ async def _handle_roll_dice(args: dict | None) -> list[types.TextContent]:
     if modifier:
         detail += f" + {modifier}" if modifier > 0 else f" - {abs(modifier)}"
 
-    text = f"\ud83c\udfb2 {expr} \u2192 [{detail}] = **{total}**"
+    text = f"[dice] {expr} -> [{detail}] = **{total}**"
     return [types.TextContent(type="text", text=text)]

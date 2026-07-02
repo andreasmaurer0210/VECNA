@@ -70,17 +70,19 @@ async def read_resource(uri: str) -> str:
     """
     Called when the AI wants to READ a resource.
     `uri` tells us which data to fetch from the API.
+
+    Note: MCP SDK may pass uri as pydantic AnyUrl — convert to str.
     """
-    # Try monster match
-    m = MONSTER_RE.match(uri)
+    uri_str = str(uri)
+
+    m = MONSTER_RE.match(uri_str)
     if m:
         data = await api.get_monster(m.group(1))
         return json.dumps(data, indent=2)
 
-    # Try spell match
-    m = SPELL_RE.match(uri)
+    m = SPELL_RE.match(uri_str)
     if m:
         data = await api.get_spell(m.group(1))
         return json.dumps(data, indent=2)
 
-    raise ValueError(f"Unknown resource URI: {uri}")
+    raise ValueError(f"Unknown resource URI: {uri_str}")

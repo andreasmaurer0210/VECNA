@@ -1,9 +1,8 @@
 """
 HTTP client for the D&D 5e SRD API (https://www.dnd5eapi.co).
 
-This module handles all communication with the external API.
-Other modules (tools.py, resources.py) call these functions —
-they never make HTTP requests directly.
+Uses sync httpx.Client running in a thread via anyio.to_thread.run_sync.
+This avoids event loop conflicts between anyio (MCP SDK) and asyncio (httpx).
 
 API base: https://www.dnd5eapi.co/api/2014/
 Endpoints: monsters, spells, classes, ability-scores, equipment, etc.
@@ -12,6 +11,7 @@ Endpoints: monsters, spells, classes, ability-scores, equipment, etc.
 import logging
 from typing import Any
 
+import anyio
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -19,113 +19,96 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.dnd5eapi.co"
 API_PREFIX = "/api/2014"
 
-
-# ---------------------------------------------------------------------------
-# Shared HTTP client
-# ---------------------------------------------------------------------------
-# httpx.AsyncClient reuses connections (faster than creating a new one
-# per request). We create it once and share it.
-_client: httpx.AsyncClient | None = None
+# Shared sync client (thread-safe for basic GET usage)
+_client: httpx.Client | None = None
+_lock: anyio.Lock | None = None
 
 
-async def _get_client() -> httpx.AsyncClient:
-    """Get or create the shared HTTP client."""
+def _get_sync_client() -> httpx.Client:
+    """Get or create the shared sync HTTP client (called in thread)."""
     global _client
     if _client is None:
-        _client = httpx.AsyncClient(base_url=BASE_URL, timeout=30.0)
+        _client = httpx.Client(base_url=BASE_URL, timeout=30.0)
     return _client
 
 
+async def _ensure_lock() -> anyio.Lock:
+    global _lock
+    if _lock is None:
+        _lock = anyio.Lock()
+    return _lock
+
+
 async def close() -> None:
-    """Shut down the HTTP client (call on server shutdown)."""
+    """Shut down the HTTP client."""
     global _client
-    if _client is not None:
-        await _client.aclose()
-        _client = None
+    lock = await _ensure_lock()
+    async with lock:
+        if _client is not None:
+            _client.close()
+            _client = None
 
 
-# ---------------------------------------------------------------------------
-# Raw fetch helpers
-# ---------------------------------------------------------------------------
-
-async def _fetch(path: str) -> dict[str, Any]:
-    """
-    GET a JSON resource from the D&D API.
-
-    Raises DndApiError on failure (non-200, network error, bad JSON).
-    """
-    client = await _get_client()
+def _fetch_sync(path: str) -> dict[str, Any]:
+    """Sync GET request (runs in thread, not on asyncio loop)."""
+    client = _get_sync_client()
     url = f"{API_PREFIX}{path}"
     logger.debug("GET %s", url)
+    resp = client.get(url)
+    resp.raise_for_status()
+    return resp.json()
 
-    try:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPStatusError as e:
-        raise DndApiError(f"API returned {e.response.status_code} for {url}") from e
-    except httpx.RequestError as e:
-        raise DndApiError(f"Network error fetching {url}: {e}") from e
+
+async def _fetch(path: str) -> dict[str, Any]:
+    """Run sync HTTP request in a thread to keep event loop free."""
+    lock = await _ensure_lock()
+    async with lock:
+        try:
+            return await anyio.to_thread.run_sync(_fetch_sync, path)
+        except httpx.HTTPStatusError as e:
+            raise DndApiError(f"API returned {e.response.status_code} for {API_PREFIX}{path}") from e
+        except httpx.RequestError as e:
+            raise DndApiError(f"Network error fetching {path}: {e}") from e
 
 
 async def _fetch_list(endpoint: str) -> list[dict[str, Any]]:
-    """
-    Fetch a list endpoint and return the `results` array.
-
-    Example: _fetch_list("/monsters") returns
-    [{"index": "adult-red-dragon", "name": "Adult Red Dragon", ...}, ...]
-    """
     data = await _fetch(endpoint)
     return data.get("results", [])
 
 
 # ---------------------------------------------------------------------------
-# Public API — called by tools & resources
+# Public API
 # ---------------------------------------------------------------------------
 
 async def list_monsters() -> list[dict[str, Any]]:
-    """Return all monster summaries: [{index, name, url}]."""
     return await _fetch_list("/monsters")
 
 
 async def get_monster(index: str) -> dict[str, Any]:
-    """Return full monster data by index (e.g. 'adult-red-dragon')."""
     return await _fetch(f"/monsters/{index}")
 
 
 async def list_spells() -> list[dict[str, Any]]:
-    """Return all spell summaries: [{index, name, level, url}]."""
     return await _fetch_list("/spells")
 
 
 async def get_spell(index: str) -> dict[str, Any]:
-    """Return full spell data by index (e.g. 'fireball')."""
     return await _fetch(f"/spells/{index}")
 
 
 async def list_classes() -> list[dict[str, Any]]:
-    """Return all class summaries: [{index, name, url}]."""
     return await _fetch_list("/classes")
 
 
 async def get_class(index: str) -> dict[str, Any]:
-    """Return full class data by index (e.g. 'fighter')."""
     return await _fetch(f"/classes/{index}")
 
 
 async def get_ability_score(index: str) -> dict[str, Any]:
-    """Return ability score by index ('str', 'dex', 'con', 'int', 'wis', 'cha')."""
     return await _fetch(f"/ability-scores/{index}")
 
 
-async def search(
-    endpoint: str, query: str
-) -> list[dict[str, Any]]:
-    """
-    Search an endpoint list for items whose name contains `query` (case-insensitive).
-
-    Example: search("monsters", "dragon") → all dragons.
-    """
+async def search(endpoint: str, query: str) -> list[dict[str, Any]]:
     items = await _fetch_list(f"/{endpoint}")
     q = query.lower()
     return [item for item in items if q in item["name"].lower()]
