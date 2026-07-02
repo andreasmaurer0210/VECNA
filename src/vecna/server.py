@@ -212,7 +212,7 @@ def run_http() -> None:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["*", "null"],
         allow_methods=["GET"],
         allow_headers=["*"],
     )
