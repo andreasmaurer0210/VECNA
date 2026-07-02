@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VECNA — D&D 5e Compendium</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0e0c0a;
+      --surface:   #1a1612;
+      --card:      #221e18;
+      --border:    #3a3028;
+      --accent:    #c0392b;
+      --gold:      #d4a017;
+      --text:      #e8dcc8;
+      --muted:     #8a7a68;
+      --radius:    6px;
+      --font:      'Georgia', serif;
+      --mono:      'Courier New', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ───────────────────────────────────────── */
+    .app { display: flex; flex-direction: column; height: 100%; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header h1 {
+      font-size: 1.6rem;
+      color: var(--gold);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    header .subtitle {
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ──────────────────────────────────────── */
+    .sidebar {
+      width: 300px;
+      min-width: 240px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+    .search-box {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .search-box input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-box input:focus { border-color: var(--accent); }
+    .search-box input::placeholder { color: var(--muted); }
+
+    .list-container {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .list-container::-webkit-scrollbar { width: 6px; }
+    .list-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.1s;
+    }
+    .list-item:hover { background: rgba(255,255,255,0.04); }
+    .list-item.selected { background: rgba(192,57,43,0.18); border-left: 3px solid var(--accent); }
+    .list-item .name { font-size: 0.9rem; }
+    .list-item .badge {
+      margin-left: auto;
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      white-space: nowrap;
+    }
+    .badge-cr { color: var(--accent); }
+    .badge-level { color: var(--gold); }
+
+    .loading-msg, .empty-msg {
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Detail Panel ─────────────────────────────────── */
+    .detail {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .detail::-webkit-scrollbar { width: 6px; }
+    .detail::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .detail-placeholder {
+      display: flex;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1.6rem;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+    .card-subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 6px;
+      text-align: center;
+    }
+    .stat-box .label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .stat-box .value {
+      font-size: 1.2rem;
+      color: var(--text);
+      font-weight: bold;
+    }
+    .stat-box .mod {
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+
+    .info-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .info-item { }
+    .info-item .lbl {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .info-item .val {
+      font-size: 0.95rem;
+    }
+
+    .section-header {
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin: 16px 0 10px;
+    }
+
+    .desc-text {
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .tag {
+      display: inline-block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      margin: 2px;
+    }
+    .tag.red { border-color: var(--accent); color: var(--accent); }
+    .tag.gold { border-color: var(--gold); color: var(--gold); }
+
+    .ability-list { }
+    .ability-entry {
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .ability-entry .aname {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--gold);
+      margin-bottom: 2px;
+    }
+    .ability-entry .adesc { font-size: 0.85rem; color: var(--text); }
+
+    /* ── Dice Tab ─────────────────────────────────────── */
+    .dice-panel {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+    .dice-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 100%;
+      max-width: 560px;
+    }
+    .dice-card h2 {
+      font-size: 1.2rem;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .dice-quick { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .dice-quick button {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .dice-quick button:hover { border-color: var(--gold); color: var(--gold); }
+
+    .dice-input-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .dice-input-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 1rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .dice-input-row input:focus { border-color: var(--accent); }
+    .dice-input-row button {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-family: var(--font);
+      font-size: 0.9rem;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      letter-spacing: 1px;
+    }
+    .dice-input-row button:hover { opacity: 0.85; }
+
+    .dice-result {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: var(--gold);
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+    .dice-history { margin-top: 20px; }
+    .dice-history h3 {
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .history-item {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .history-item .total { color: var(--text); }
+
+    /* ── Tab panels ───────────────────────────────────── */
+    .tab-panel { display: none; flex: 1; overflow: hidden; }
+    .tab-panel.active { display: flex; }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 640px) {
+      .sidebar { width: 200px; min-width: 160px; }
+      .stat-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>VECNA</h1>
+      <div class="subtitle">D&D 5e · SRD Compendium</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="monsters">Monsters</button>
+    <button class="tab-btn" data-tab="spells">Spells</button>
+    <button class="tab-btn" data-tab="classes">Classes</button>
+    <button class="tab-btn" data-tab="dice">Dice</button>
+  </div>
+
+  <!-- ── MONSTERS ── -->
+  <div class="tab-panel active main" id="tab-monsters">
+    <div class="sidebar">
+      <div class="search-box">
+        <input type="text" id="monster-search" placeholder="Search monsters…" />
+      </div>
+      <div class="list-container" id="monster-list">
+        <div class="loading-msg">Loading monsters…</div>
+      </div>
+    </div>
+    <div class="detail" id="monster-detail">
+      <div class="detail-placeholder">Select a monster</div>
+    </div>
+  </div>
+
+  <!-- ── SPELLS ── -->
+  <div class="tab-panel main" id="tab-spells">
+    <div class="sidebar">
+      <div class="search-box">
+        <input type="text" id="spell-search" placeholder="Search spells…" />
+      </div>
+      <div class="list-container" id="spell-list">
+        <div class="loading-msg">Loading spells…</div>
+      </div>
+    </div>
+    <div class="detail" id="spell-detail">
+      <div class="detail-placeholder">Select a spell</div>
+    </div>
+  </div>
+
+  <!-- ── CLASSES ── -->
+  <div class="tab-panel main" id="tab-classes">
+    <div class="sidebar">
+      <div class="search-box">
+        <input type="text" id="class-search" placeholder="Search classes…" />
+      </div>
+      <div class="list-container" id="class-list">
+        <div class="loading-msg">Loading classes…</div>
+      </div>
+    </div>
+    <div class="detail" id="class-detail">
+      <div class="detail-placeholder">Select a class</div>
+    </div>
+  </div>
+
+  <!-- ── DICE ── -->
+  <div class="tab-panel" id="tab-dice">
+    <div class="dice-panel">
+      <div class="dice-card">
+        <h2>Dice Roller</h2>
+        <div class="dice-quick">
+          <button onclick="quickRoll('1d4')">d4</button>
+          <button onclick="quickRoll('1d6')">d6</button>
+          <button onclick="quickRoll('1d8')">d8</button>
+          <button onclick="quickRoll('1d10')">d10</button>
+          <button onclick="quickRoll('1d12')">d12</button>
+          <button onclick="quickRoll('1d20')">d20</button>
+          <button onclick="quickRoll('1d100')">d100</button>
+          <button onclick="quickRoll('4d6')">4d6</button>
+          <button onclick="quickRoll('2d6+3')">2d6+3</button>
+        </div>
+        <div class="dice-input-row">
+          <input type="text" id="dice-input" placeholder="e.g. 2d6+3" value="1d20" />
+          <button onclick="rollDice()">Roll</button>
+        </div>
+        <div class="dice-result" id="dice-result">—</div>
+        <div class="dice-history">
+          <h3>History</h3>
+          <div id="dice-history-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://www.dnd5eapi.co/api/2014';
+const cache = {};
+
+async function apiFetch(path) {
+  if (cache[path]) return cache[path];
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(`API error ${r.status}`);
+  const data = await r.json();
+  cache[path] = data;
+  return data;
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Search helper ─────────────────────────────────────────────────────────
+
+function filterList(items, query) {
+  const q = query.toLowerCase();
+  return items.filter(i => i.name.toLowerCase().includes(q) || i.index.includes(q));
+}
+
+// ── Stat modifier helper ──────────────────────────────────────────────────
+
+function mod(score) {
+  const m = Math.floor((score - 10) / 2);
+  return m >= 0 ? `+${m}` : `${m}`;
+}
+
+// ── MONSTERS ─────────────────────────────────────────────────────────────
+
+let allMonsters = [];
+
+async function loadMonsters() {
+  const data = await apiFetch('/monsters');
+  allMonsters = data.results;
+  renderMonsterList(allMonsters);
+}
+
+function renderMonsterList(items) {
+  const el = document.getElementById('monster-list');
+  if (!items.length) { el.innerHTML = '<div class="empty-msg">No results</div>'; return; }
+  el.innerHTML = items.map(m =>
+    `<div class="list-item" data-index="${m.index}" onclick="loadMonster('${m.index}', this)">
+      <span class="name">${m.name}</span>
+     </div>`
+  ).join('');
+}
+
+async function loadMonster(index, el) {
+  document.querySelectorAll('#monster-list .list-item').forEach(i => i.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  const detail = document.getElementById('monster-detail');
+  detail.innerHTML = '<div class="loading-msg">Loading…</div>';
+  try {
+    const d = await apiFetch(`/monsters/${index}`);
+    renderMonster(d, detail);
+  } catch(e) {
+    detail.innerHTML = `<div class="empty-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function renderMonster(d, el) {
+  const ac = Array.isArray(d.armor_class)
+    ? d.armor_class.map(a => `${a.value} (${a.type})`).join(', ')
+    : d.armor_class ?? '?';
+  const speed = Object.entries(d.speed || {}).map(([k,v]) => `${k} ${v}`).join(', ');
+
+  const diIcons = d.damage_immunities?.length
+    ? `<div class="info-item"><div class="lbl">Damage Immunities</div><div class="val">${d.damage_immunities.join(', ')}</div></div>` : '';
+  const drIcons = d.damage_resistances?.length
+    ? `<div class="info-item"><div class="lbl">Damage Resistances</div><div class="val">${d.damage_resistances.join(', ')}</div></div>` : '';
+
+  const senses = Object.entries(d.senses || {}).map(([k,v]) => `${k}: ${v}`).join(' · ');
+
+  const specialAbilities = (d.special_abilities || []).map(a =>
+    `<div class="ability-entry"><div class="aname">${a.name}</div><div class="adesc">${a.desc || ''}</div></div>`
+  ).join('');
+
+  const actions = (d.actions || []).map(a =>
+    `<div class="ability-entry"><div class="aname">${a.name}</div><div class="adesc">${a.desc || ''}</div></div>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">${d.name}</div>
+      <div class="card-subtitle">${d.size ?? ''} ${d.type ?? ''} · ${d.alignment ?? ''}</div>
+      <div class="info-row">
+        <div class="info-item"><div class="lbl">Armor Class</div><div class="val">${ac}</div></div>
+        <div class="info-item"><div class="lbl">Hit Points</div><div class="val">${d.hit_points} (${d.hit_dice})</div></div>
+        <div class="info-item"><div class="lbl">Speed</div><div class="val">${speed}</div></div>
+        <div class="info-item"><div class="lbl">Challenge Rating</div><div class="val"><span class="tag red">CR ${d.challenge_rating}</span></div></div>
+        <div class="info-item"><div class="lbl">XP</div><div class="val">${d.xp}</div></div>
+        <div class="info-item"><div class="lbl">Proficiency Bonus</div><div class="val">+${d.proficiency_bonus}</div></div>
+      </div>
+
+      <div class="section-header">Ability Scores</div>
+      <div class="stat-grid">
+        ${['strength','dexterity','constitution','intelligence','wisdom','charisma'].map(s => `
+          <div class="stat-box">
+            <div class="label">${s.slice(0,3).toUpperCase()}</div>
+            <div class="value">${d[s]}</div>
+            <div class="mod">${mod(d[s])}</div>
+          </div>`).join('')}
+      </div>
+
+      ${senses ? `<div class="info-row" style="margin-top:10px">
+        <div class="info-item"><div class="lbl">Senses</div><div class="val">${senses}</div></div>
+      </div>` : ''}
+      ${d.languages ? `<div class="info-row">
+        <div class="info-item"><div class="lbl">Languages</div><div class="val">${d.languages}</div></div>
+      </div>` : ''}
+      ${diIcons || drIcons ? `<div class="info-row">${diIcons}${drIcons}</div>` : ''}
+    </div>
+
+    ${specialAbilities ? `<div class="card">
+      <div class="section-header">Special Abilities</div>
+      <div class="ability-list">${specialAbilities}</div>
+    </div>` : ''}
+
+    ${actions ? `<div class="card">
+      <div class="section-header">Actions</div>
+      <div class="ability-list">${actions}</div>
+    </div>` : ''}
+  `;
+}
+
+document.getElementById('monster-search').addEventListener('input', e => {
+  renderMonsterList(filterList(allMonsters, e.target.value));
+});
+
+// ── SPELLS ───────────────────────────────────────────────────────────────
+
+let allSpells = [];
+
+async function loadSpells() {
+  const data = await apiFetch('/spells');
+  allSpells = data.results;
+  renderSpellList(allSpells);
+}
+
+function renderSpellList(items) {
+  const el = document.getElementById('spell-list');
+  if (!items.length) { el.innerHTML = '<div class="empty-msg">No results</div>'; return; }
+  el.innerHTML = items.map(s => {
+    const lvl = s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`;
+    return `<div class="list-item" data-index="${s.index}" onclick="loadSpell('${s.index}', this)">
+      <span class="name">${s.name}</span>
+      <span class="badge badge-level">${lvl}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadSpell(index, el) {
+  document.querySelectorAll('#spell-list .list-item').forEach(i => i.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  const detail = document.getElementById('spell-detail');
+  detail.innerHTML = '<div class="loading-msg">Loading…</div>';
+  try {
+    const d = await apiFetch(`/spells/${index}`);
+    renderSpell(d, detail);
+  } catch(e) {
+    detail.innerHTML = `<div class="empty-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function renderSpell(d, el) {
+  const school = d.school?.name ?? '?';
+  const level = d.level === 0 ? 'Cantrip' : `Level ${d.level}`;
+  const classes = (d.classes || []).map(c => `<span class="tag">${c.name}</span>`).join('');
+  const components = (d.components || []).join(', ') + (d.material ? ` (${d.material})` : '');
+  const desc = (d.desc || []).join('<br/><br/>');
+  const higher = (d.higher_level || []).join(' ');
+
+  let dmgHtml = '';
+  if (d.damage?.damage_at_slot_level) {
+    const rows = Object.entries(d.damage.damage_at_slot_level)
+      .map(([slot, dmg]) => `<span class="tag gold">Slot ${slot}: ${dmg}</span>`).join('');
+    dmgHtml = `<div class="section-header">Damage by Slot Level</div><div>${rows}</div>`;
+  }
+
+  let aoeHtml = '';
+  if (d.area_of_effect) {
+    aoeHtml = `<div class="info-item"><div class="lbl">Area of Effect</div><div class="val">${d.area_of_effect.size} ft ${d.area_of_effect.type}</div></div>`;
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">${d.name}</div>
+      <div class="card-subtitle">${level} · ${school}</div>
+      <div class="info-row">
+        <div class="info-item"><div class="lbl">Casting Time</div><div class="val">${d.casting_time}</div></div>
+        <div class="info-item"><div class="lbl">Range</div><div class="val">${d.range}</div></div>
+        <div class="info-item"><div class="lbl">Components</div><div class="val">${components}</div></div>
+        <div class="info-item"><div class="lbl">Duration</div><div class="val">${d.duration}</div></div>
+        ${d.concentration ? `<div class="info-item"><div class="lbl">Concentration</div><div class="val"><span class="tag gold">Yes</span></div></div>` : ''}
+        ${d.ritual ? `<div class="info-item"><div class="lbl">Ritual</div><div class="val"><span class="tag">Ritual</span></div></div>` : ''}
+        ${aoeHtml}
+      </div>
+      <div class="info-row"><div class="info-item"><div class="lbl">Classes</div><div class="val">${classes}</div></div></div>
+
+      <div class="section-header">Description</div>
+      <div class="desc-text">${desc}</div>
+
+      ${higher ? `<div class="section-header">At Higher Levels</div><div class="desc-text">${higher}</div>` : ''}
+      ${dmgHtml}
+    </div>
+  `;
+}
+
+document.getElementById('spell-search').addEventListener('input', e => {
+  renderSpellList(filterList(allSpells, e.target.value));
+});
+
+// ── CLASSES ───────────────────────────────────────────────────────────────
+
+let allClasses = [];
+
+async function loadClasses() {
+  const data = await apiFetch('/classes');
+  allClasses = data.results;
+  renderClassList(allClasses);
+}
+
+function renderClassList(items) {
+  const el = document.getElementById('class-list');
+  if (!items.length) { el.innerHTML = '<div class="empty-msg">No results</div>'; return; }
+  el.innerHTML = items.map(c =>
+    `<div class="list-item" data-index="${c.index}" onclick="loadClass('${c.index}', this)">
+      <span class="name">${c.name}</span>
+    </div>`
+  ).join('');
+}
+
+async function loadClass(index, el) {
+  document.querySelectorAll('#class-list .list-item').forEach(i => i.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  const detail = document.getElementById('class-detail');
+  detail.innerHTML = '<div class="loading-msg">Loading…</div>';
+  try {
+    const d = await apiFetch(`/classes/${index}`);
+    renderClass(d, detail);
+  } catch(e) {
+    detail.innerHTML = `<div class="empty-msg">Error: ${e.message}</div>`;
+  }
+}
+
+function renderClass(d, el) {
+  const saves = (d.saving_throws || []).map(s => `<span class="tag gold">${s.name}</span>`).join('');
+  const subclasses = (d.subclasses || []).map(s => `<span class="tag">${s.name}</span>`).join('');
+  const profs = (d.proficiencies || []).map(p => `<span class="tag">${p.name}</span>`).join('');
+
+  let profChoices = '';
+  if (d.proficiency_choices?.length) {
+    profChoices = d.proficiency_choices.map(pc => {
+      const opts = (pc.from?.options || []).map(o => o.item?.name ?? o.choice?.desc ?? '?').join(', ');
+      return `<div class="info-item" style="flex-basis:100%"><div class="lbl">Choose ${pc.choose}</div><div class="val" style="font-size:0.85rem;color:var(--muted)">${opts}</div></div>`;
+    }).join('');
+  }
+
+  let startEq = '';
+  if (d.starting_equipment?.length) {
+    startEq = d.starting_equipment.map(e =>
+      `<span class="tag">${e.equipment?.name ?? '?'} ×${e.quantity}</span>`
+    ).join('');
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">${d.name}</div>
+      <div class="card-subtitle">Base Class</div>
+      <div class="info-row">
+        <div class="info-item"><div class="lbl">Hit Die</div><div class="val"><span class="tag red">d${d.hit_die}</span></div></div>
+        <div class="info-item"><div class="lbl">Saving Throws</div><div class="val">${saves}</div></div>
+        <div class="info-item"><div class="lbl">Subclasses</div><div class="val">${subclasses}</div></div>
+      </div>
+
+      <div class="section-header">Proficiencies</div>
+      <div>${profs || '<span style="color:var(--muted)">—</span>'}</div>
+
+      ${profChoices ? `<div class="section-header">Proficiency Choices</div><div class="info-row" style="flex-direction:column;gap:8px">${profChoices}</div>` : ''}
+
+      ${startEq ? `<div class="section-header">Starting Equipment</div><div>${startEq}</div>` : ''}
+    </div>
+  `;
+}
+
+document.getElementById('class-search').addEventListener('input', e => {
+  renderClassList(filterList(allClasses, e.target.value));
+});
+
+// ── DICE ─────────────────────────────────────────────────────────────────
+
+const diceHistory = [];
+
+function quickRoll(expr) {
+  document.getElementById('dice-input').value = expr;
+  rollDice();
+}
+
+function rollDice() {
+  const raw = document.getElementById('dice-input').value.trim();
+  try {
+    const result = evalDice(raw);
+    document.getElementById('dice-result').textContent = result.total;
+    addDiceHistory(raw, result);
+  } catch(e) {
+    document.getElementById('dice-result').textContent = '!';
+    document.getElementById('dice-result').title = e.message;
+  }
+}
+
+function evalDice(expr) {
+  let e = expr.toLowerCase().replace(/\s+/g, '');
+  let modifier = 0;
+
+  const plusIdx = e.lastIndexOf('+');
+  const minusIdx = e.lastIndexOf('-');
+  const sepIdx = Math.max(plusIdx, minusIdx);
+
+  if (sepIdx > 0 && e.indexOf('d') < sepIdx) {
+    const sign = e[sepIdx] === '+' ? 1 : -1;
+    modifier = sign * parseInt(e.slice(sepIdx + 1), 10);
+    e = e.slice(0, sepIdx);
+  }
+
+  if (!e.includes('d')) throw new Error('Invalid dice expression');
+  const [countStr, sidesStr] = e.split('d');
+  const count = countStr ? parseInt(countStr, 10) : 1;
+  const sides = parseInt(sidesStr, 10);
+
+  if (isNaN(count) || isNaN(sides) || count < 1 || sides < 2 || count > 100)
+    throw new Error('Invalid dice expression');
+
+  const rolls = Array.from({length: count}, () => Math.floor(Math.random() * sides) + 1);
+  const subtotal = rolls.reduce((a, b) => a + b, 0);
+  return { rolls, modifier, subtotal, total: subtotal + modifier };
+}
+
+function addDiceHistory(expr, result) {
+  diceHistory.unshift({ expr, result });
+  if (diceHistory.length > 10) diceHistory.pop();
+  const el = document.getElementById('dice-history-list');
+  el.innerHTML = diceHistory.map(h => {
+    const detail = h.result.rolls.join(' + ')
+      + (h.result.modifier > 0 ? ` + ${h.result.modifier}` : h.result.modifier < 0 ? ` - ${Math.abs(h.result.modifier)}` : '');
+    return `<div class="history-item">${h.expr} → [${detail}] = <span class="total">${h.result.total}</span></div>`;
+  }).join('');
+}
+
+document.getElementById('dice-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') rollDice();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+
+loadMonsters();
+loadSpells();
+loadClasses();
+</script>
+</body>
+</html>
