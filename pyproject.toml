@@ -1,0 +1,16 @@
+[project]
+name = "vecna"
+version = "0.1.0"
+description = "MCP server for D&D Beyond character integration"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.6.0",
+    "httpx>=0.28.0",
+]
+
+[project.scripts]
+vecna = "vecna.server:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
