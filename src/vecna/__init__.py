@@ -1,7 +1,12 @@
 """
-VECNA — MCP server for D&D Beyond character data.
+VECNA — MCP server for D&D 5e SRD data.
 
-This package exports the MCP server's main entry point.
+Modules:
+  api.py       HTTP client for dnd5eapi.co
+  tools.py     MCP tool handlers
+  resources.py MCP resource handlers
+  prompts.py   MCP prompt templates
+  server.py    Entry point (main())
 """
 
 from vecna.server import main
