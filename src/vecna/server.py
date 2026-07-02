@@ -19,6 +19,12 @@ import logging
 import mcp.server.stdio
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
+from mcp.types import (
+    PromptsCapability,
+    ResourcesCapability,
+    ServerCapabilities,
+    ToolsCapability,
+)
 
 from vecna import api, prompts, resources, tools
 
@@ -94,10 +100,15 @@ async def main() -> None:
             await server.run(
                 read_stream,
                 write_stream,
-                InitializationOptions(
-                    server_name="vecna",
-                    server_version="0.1.1",
+            InitializationOptions(
+                server_name="vecna",
+                server_version="0.1.1",
+                capabilities=ServerCapabilities(
+                    tools=ToolsCapability(),
+                    resources=ResourcesCapability(),
+                    prompts=PromptsCapability(),
                 ),
+            ),
             )
     finally:
         await api.close()

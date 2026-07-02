@@ -6,9 +6,17 @@ Modules:
   tools.py     MCP tool handlers
   resources.py MCP resource handlers
   prompts.py   MCP prompt templates
-  server.py    Entry point (main())
+  server.py    Async entry point (main())
 """
 
-from vecna.server import main
+import asyncio
+
+from vecna.server import main as _main
+
+
+def main() -> None:
+    """Synchronous entry point for the `vecna` CLI command."""
+    asyncio.run(_main())
+
 
 __all__ = ["main"]

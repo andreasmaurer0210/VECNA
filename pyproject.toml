@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.scripts]
-vecna = "vecna.server:main"
+vecna = "vecna:main"
 
 [tool.ruff]
 line-length = 100
