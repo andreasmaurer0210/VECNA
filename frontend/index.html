@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VECNA — D&D 5e Compendium</title>
-  <!-- Server URL — change this if VECNA runs on a different host/port -->
-  <meta name="vecna-server" content="http://localhost:8000" />
+  <!-- VECNA server URL (GitHub Codespaces forwarded port) -->
+  <meta name="vecna-server" content="https://scaling-carnival-wj5gw4q6vrhqpx-8000.app.github.dev" />
   <style>
     /* ── Reset & Base ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -513,16 +513,14 @@ async function checkServer() {
   dot.className = 'status-dot checking';
   label.textContent = 'Connecting…';
   try {
-    const r = await fetch(API + '/health');
-    if (r.ok) {
-      dot.className = 'status-dot ok';
-      label.textContent = SERVER.replace('http://', '') + ' · online';
-    } else {
-      throw new Error('HTTP ' + r.status);
-    }
-  } catch {
+    const r = await fetch(API + '/health', { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    dot.className = 'status-dot ok';
+    label.textContent = 'VECNA · online';
+  } catch (e) {
     dot.className = 'status-dot error';
-    label.textContent = 'Server offline — run: VECNA_TRANSPORT=http uv run vecna';
+    label.textContent = 'VECNA · offline';
+    console.error('VECNA server unreachable:', e);
   }
 }
 
@@ -891,10 +889,11 @@ document.getElementById('dice-input').addEventListener('keydown', e => {
 
 // ── Init ──────────────────────────────────────────────────────────────────
 
-checkServer();
-loadMonsters();
-loadSpells();
-loadClasses();
+checkServer().then(() => {
+  loadMonsters();
+  loadSpells();
+  loadClasses();
+});
 </script>
 </body>
 </html>
