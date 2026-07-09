@@ -99,9 +99,9 @@ http://localhost:8080/?server=http://localhost:8000
 
 ```mermaid
 flowchart LR
-    Agent[AI agent / client]
-    Vecna[local uv run vecna]
-    SRD[public D&D 5e SRD API]
+    Agent["AI agent / client"]
+    Vecna["local uv run vecna"]
+    SRD["public D&D 5e SRD API"]
 
     Agent <-->|MCP over stdio| Vecna
     Vecna -->|HTTPS reads| SRD
@@ -111,10 +111,10 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    Agent[AI agent / client]
-    Browser[Static browser frontend]
-    Render[VECNA on Render]
-    SRD[public D&D 5e SRD API]
+    Agent["AI agent / client"]
+    Browser["Static browser frontend"]
+    Render["VECNA on Render"]
+    SRD["public D&D 5e SRD API"]
 
     Agent <-->|MCP HTTP /mcp/| Render
     Browser -->|REST JSON /api/...| Render
@@ -125,12 +125,12 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Push[git push origin master]
-    Repo[GitHub repository]
-    Render[Render Docker web service]
-    Pages[GitHub Pages static frontend]
-    MCP[/mcp/ for AI clients]
-    API[/api/... for frontend]
+    Push["git push origin master"]
+    Repo["GitHub repository"]
+    Render["Render Docker web service"]
+    Pages["GitHub Pages static frontend"]
+    MCP["/mcp/ for AI clients"]
+    API["/api/... for frontend"]
 
     Push --> Repo
     Repo -->|render.yaml autoDeploy| Render
