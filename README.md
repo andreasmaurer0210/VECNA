@@ -3,9 +3,9 @@
 **V**ault **E**xtensible **C**omputational **N**exus for **A**dventurers
 
 A Python **MCP server** for D&D 5e SRD data (monsters, spells, classes, dice),
-plus a static browser frontend. Designed to be **hosted persistently**: the
-server runs on Render, the frontend on GitHub Pages, and both redeploy
-automatically on every push to `master`.
+plus a static browser frontend. Designed to run either locally or hosted: the
+server can run through stdio or HTTP, the frontend can point at local or remote
+HTTP, and the hosted deployment uses Render + GitHub Pages.
 
 ## What is this?
 
@@ -56,7 +56,43 @@ Read-only JSON under the `dnd://` scheme (listing caps at the first 50 of each):
 |--------|------|---------|
 | `create_character` | `class_name` (optional) | Guided level-1 character creation |
 
-## Architecture (hosted)
+## Architecture sketch
+
+### Local MCP (`stdio`)
+
+The agent starts VECNA as a child process. MCP messages move over stdin/stdout;
+no HTTP port is needed.
+
+```
+AI agent / client
+  │
+  │ MCP over stdio
+  ▼
+local `uv run vecna`
+  │
+  │ HTTPS reads
+  ▼
+public D&D 5e SRD API
+https://www.dnd5eapi.co/api/2014
+```
+
+### Remote MCP (Streamable HTTP)
+
+The agent connects to the hosted `/mcp/` endpoint. The browser frontend uses the
+public REST API under `/api/...`; both are served by the same VECNA process.
+
+```
+AI agent / client ───── MCP HTTP ─────► https://vecna-svpo.onrender.com/mcp/
+                                             │
+Browser frontend ───── REST JSON ─────► https://vecna-svpo.onrender.com/api/...
+                                             │
+                                             │ HTTPS reads
+                                             ▼
+                                   public D&D 5e SRD API
+                                   https://www.dnd5eapi.co/api/2014
+```
+
+### Hosted deployment
 
 ```
                  push to master
@@ -84,6 +120,7 @@ GitHub repo ──────────┬───────────�
 
 ```bash
 uv sync
+cp .env.example .env
 
 # stdio transport (what local AI clients use)
 uv run vecna
@@ -91,8 +128,43 @@ uv run vecna
 # HTTP transport (serves /mcp + /api on :8000, same as production)
 VECNA_TRANSPORT=http VECNA_PORT=8000 uv run vecna
 # health:  curl http://localhost:8000/api/health
-# open frontend against it:  frontend/index.html?server=http://localhost:8000
 ```
+
+To run the frontend against the local server:
+
+```bash
+python3 -m http.server 8080 --directory frontend
+# open http://localhost:8080/?server=http://localhost:8000
+```
+
+---
+
+## Hosting configuration
+
+Server runtime is configured by environment variables:
+
+| Variable | Local value | Hosted value | Purpose |
+|----------|-------------|--------------|---------|
+| `VECNA_TRANSPORT` | `http` or unset for stdio | `http` | Selects stdio vs Streamable HTTP |
+| `VECNA_HOST` | `127.0.0.1` | unset (`0.0.0.0` default) | Bind address |
+| `VECNA_PORT` | `8000` | unset | Local HTTP port |
+| `PORT` | unset | Render-provided | Hosted HTTP port |
+
+Frontend server URL is configured in this order:
+
+1. `?server=...` query string override.
+2. `frontend/config.json` (committed default, currently Render).
+3. Embedded fallback `<meta name="vecna-server">`.
+
+Remote default:
+
+```json
+{
+  "server": "https://vecna-svpo.onrender.com"
+}
+```
+
+Local override uses the query string, e.g. `?server=http://localhost:8000`.
 
 ---
 
@@ -132,8 +204,7 @@ One-time setup:
 2. Push to `master`. The workflow publishes `frontend/` to
    `https://andreasmaurer0210.github.io/VECNA/`.
 3. Point the frontend at your server. Either:
-   - edit the `<meta name="vecna-server">` value in
-     [`frontend/index.html`](frontend/index.html) to your Render URL and push, **or**
+   - edit [`frontend/config.json`](frontend/config.json) to your Render URL and push, **or**
    - open the Pages URL with an override: `…/VECNA/?server=https://vecna-ab12.onrender.com`.
 
 CORS is already open (`GET *`), and the Render URL is HTTPS, so the HTTPS Pages
@@ -142,6 +213,24 @@ site can call it without mixed-content errors.
 ---
 
 ## Configure the MCP in your AI client
+
+MCP connection mode is configured in the AI client, not in the frontend.
+
+| Client | Config file | Local MCP | Remote MCP |
+|--------|-------------|-----------|------------|
+| OpenCode | `~/.config/opencode/opencode.json` | `type: "local"` + `command` | `type: "remote"` + `url` |
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` | `command: "uv"` | `command: "npx"` + `mcp-remote` |
+
+Server runtime mode is configured in the server environment:
+
+| Runtime | Config location | Value |
+|---------|-----------------|-------|
+| Local stdio MCP | unset env vars | default `VECNA_TRANSPORT=stdio` |
+| Local HTTP MCP/API | shell or `.env.example` copy | `VECNA_TRANSPORT=http`, `VECNA_PORT=8000` |
+| Hosted HTTP MCP/API | [`render.yaml`](render.yaml) | `VECNA_TRANSPORT=http`; Render injects `PORT` |
+
+Frontend public API URL is configured separately in [`frontend/config.json`](frontend/config.json)
+or with `?server=...`. That affects browser REST calls only, not MCP client mode.
 
 ### OpenCode
 
@@ -223,11 +312,15 @@ Restart the client after editing config.
 
 ```
 VECNA/
+├── .env.example                   # Local HTTP server env template
 ├── Dockerfile                     # Container Render builds
 ├── render.yaml                    # Render Blueprint (web service, autoDeploy)
 ├── .github/workflows/pages.yml    # Deploy frontend/ to GitHub Pages
 ├── .devcontainer/devcontainer.json# Optional: Codespaces (ephemeral) dev
 ├── frontend/index.html            # Static compendium UI (GitHub Pages)
+├── frontend/config.json           # Committed remote frontend server URL
+├── frontend/js/                   # Frontend behavior modules
+├── frontend/styles/               # Frontend CSS modules
 ├── pyproject.toml                 # Python project + dependencies
 ├── uv.lock                        # Pinned deps (reproducible builds)
 └── src/vecna/
@@ -242,8 +335,8 @@ VECNA/
 ## Adding a new tool
 
 1. Add a `types.Tool(...)` entry in `tools.get_tool_definitions()`.
-2. Add an `if name == "your_tool":` branch in `tools.handle_call_tool()`.
-3. Write the handler function.
+2. Write the `_handle_your_tool(...)` handler function.
+3. Add it to the `handlers` map in `tools.handle_call_tool()`.
 
 ## License
 
