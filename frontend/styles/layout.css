@@ -1,0 +1,9 @@
+/* ── Tab panels ───────────────────────────────────── */
+.tab-panel { display: none; flex: 1; overflow: hidden; }
+.tab-panel.active { display: flex; }
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 640px) {
+  .sidebar { width: 200px; min-width: 160px; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+}

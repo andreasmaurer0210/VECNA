@@ -1,0 +1,92 @@
+/* ── Dice Tab ─────────────────────────────────────── */
+.dice-panel {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 24px;
+}
+.dice-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  width: 100%;
+  max-width: 560px;
+}
+.dice-card h2 {
+  font-size: 1.2rem;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.dice-quick { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.dice-quick button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.dice-quick button:hover { border-color: var(--gold); color: var(--gold); }
+
+.dice-input-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.dice-input-row input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1rem;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.dice-input-row input:focus { border-color: var(--accent); }
+.dice-input-row button {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: 1px;
+}
+.dice-input-row button:hover { opacity: 0.85; }
+
+.dice-result {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: var(--gold);
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+.dice-history { margin-top: 20px; }
+.dice-history h3 {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.history-item {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.history-item .total { color: var(--text); }
